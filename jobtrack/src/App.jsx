@@ -17,6 +17,24 @@ const SPECS = [
   { name: "블로그 글", target: 20, unit: "편", cur: 7 },
 ];
 
+// 잔디 목업 데이터 생성 (나중에 실제 활동 기록으로 교체)
+function makeGrass() {
+  const weeks = 26, g = [];
+  let seed = 7;
+  const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+  for (let w = 0; w < weeks; w++) {
+    const col = [];
+    for (let d = 0; d < 7; d++) {
+      const r = rnd();
+      col.push(r < 0.4 ? 0 : r < 0.62 ? 1 : r < 0.8 ? 2 : r < 0.93 ? 3 : 4);
+    }
+    g.push(col);
+  }
+  return g;
+}
+const GRASS = makeGrass();
+const GRASS_COLORS = ["#1A2036", "#8DFF5C44", "#8DFF5C77", "#8DFF5CBB", "#8DFF5C"];
+
 const pct = (c, t) => Math.min(100, Math.round((c / t) * 100));
 
 function App() {
@@ -83,6 +101,36 @@ function App() {
        {SPECS.map((s) => <GaugeCard key={s.name} s={s} />)}
      </div>
    </section>
+   {/* 잔디형 — 활동 히스토리 */}
+<section style={{ background: CARD, border: `1px solid ${LINE}`,
+  borderRadius: 16, padding: 18, marginTop: 16 }}>
+  <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>
+    활동 히스토리
+  </div>
+  <div style={{ fontSize: 11, color: MUTE, fontFamily: "monospace",
+    marginBottom: 14 }}>얼마나 꾸준했나 · 최근 26주</div>
+
+  <div style={{ display: "flex", gap: 3, overflowX: "auto", paddingBottom: 4 }}>
+    {GRASS.map((col, wi) => (
+      <div key={wi} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        {col.map((v, di) => (
+          <div key={di} style={{ width: 14, height: 14, borderRadius: 3,
+            background: GRASS_COLORS[v] }} />
+        ))}
+      </div>
+    ))}
+  </div>
+
+  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11,
+    color: MUTE, marginTop: 12, justifyContent: "flex-end" }}>
+    적음
+    {GRASS_COLORS.map((c) => (
+      <span key={c} style={{ width: 11, height: 11, borderRadius: 3,
+        background: c, display: "inline-block" }} />
+    ))}
+    많음
+  </div>
+</section>
       </main>
     </div>
   );
