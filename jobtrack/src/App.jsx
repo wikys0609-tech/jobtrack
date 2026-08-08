@@ -70,8 +70,53 @@ function App() {
           </div>
         </div>
 
-        {/* 다음 미션에서 여기에 계기판이 들어옵니다 */}
+        {/* 계기판 — 스펙별 달성률 */}
+   <section style={{ background: CARD, border: `1px solid ${LINE}`,
+     borderRadius: 16, padding: 18 }}>
+     <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>
+       스펙별 달성률
+     </div>
+     <div style={{ fontSize: 11, color: MUTE, fontFamily: "monospace",
+       marginBottom: 14 }}>지금 어디까지 왔나 · 계기판</div>
+     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
+       gap: 12 }}>
+       {SPECS.map((s) => <GaugeCard key={s.name} s={s} />)}
+     </div>
+   </section>
       </main>
+    </div>
+  );
+}
+
+// ── 계기판 카드 (스펙 하나를 반원 게이지로) ──
+function GaugeCard({ s }) {
+  const p = pct(s.cur, s.target);
+  const col = p >= 100 ? "#8DFF5C" : p >= 50 ? "#00E5C7" : "#FFC24B";
+  const cx = 60, cy = 60, R = 46, start = 135, sweep = 270, ticks = 28;
+  const active = Math.round((p / 100) * ticks);
+  const seg = [];
+  for (let i = 0; i < ticks; i++) {
+    const a = ((start + (sweep / (ticks - 1)) * i) * Math.PI) / 180;
+    const x1 = cx + Math.cos(a) * (R - 7), y1 = cy + Math.sin(a) * (R - 7);
+    const x2 = cx + Math.cos(a) * R, y2 = cy + Math.sin(a) * R;
+    seg.push(
+      <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
+        stroke={i < active ? col : "#232A47"} strokeWidth="3" strokeLinecap="round" />
+    );
+  }
+  return (
+    <div style={{ background: "#121629", border: "1px solid #262C4A",
+      borderRadius: 12, padding: "12px 6px 10px", textAlign: "center" }}>
+      <svg width="120" height="92" viewBox="0 0 120 92">
+        {seg}
+        <text x="60" y="58" textAnchor="middle" fontSize="24" fontWeight="900"
+          fill={col} fontFamily="monospace">{p}</text>
+        <text x="60" y="72" textAnchor="middle" fontSize="8" fill="#7A82A8"
+          fontFamily="monospace">%</text>
+      </svg>
+      <div style={{ fontWeight: 700, fontSize: 12.5, marginTop: -4 }}>{s.name}</div>
+      <div style={{ fontSize: 10.5, color: "#7A82A8", fontFamily: "monospace",
+        marginTop: 2 }}>{s.cur}/{s.target}{s.unit}</div>
     </div>
   );
 }
