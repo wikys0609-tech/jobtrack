@@ -1,3 +1,6 @@
+import { useState, useEffect } from "react";
+import { supabase } from "./supabase";
+
 // ── 색상 팔레트 ──
 const BG = "#0B0E1A";
 const CARD = "#161B33";
@@ -8,14 +11,7 @@ const NEON = "#00E5C7";
 const VIOLET = "#8B6DFF";
 
 // ── 데이터 (나중에 Supabase로 교체할 자리) ──
-const SPECS = [
-  { name: "알고리즘", target: 100, unit: "문제", cur: 62 },
-  { name: "CS 지식", target: 100, unit: "%", cur: 45 },
-  { name: "프로젝트", target: 3, unit: "개", cur: 1 },
-  { name: "GitHub 커밋", target: 300, unit: "회", cur: 184 },
-  { name: "정보처리기사", target: 1, unit: "취득", cur: 0 },
-  { name: "블로그 글", target: 20, unit: "편", cur: 7 },
-];
+
 
 // 잔디 목업 데이터 생성
 function makeGrass() {
@@ -47,6 +43,32 @@ const CYCLE_COLOR = { "매일": "#00E5C7", "매주": "#8B6DFF" };
 const pct = (c, t) => Math.min(100, Math.round((c / t) * 100));
 
 function App() {
+  const [SPECS, setSPECS] = useState([]);  // 스펙을 담을 상자 (처음엔 비어있음)
+
+  // 앱이 켜질 때 한 번 DB에서 스펙을 불러온다
+  useEffect(() => {
+    async function loadSpecs() {
+      const { data, error } = await supabase
+        .from("specs")
+        .select("*")
+        .order("id");
+      if (error) {
+        console.error("스펙 불러오기 실패:", error);
+      } else {
+        setSPECS(data);
+      }
+    }
+    loadSpecs();
+  }, []);
+  if (SPECS.length === 0) {
+    return <div style={{
+      background: "#0B0E1A", color: "#7A82A8",
+      minHeight: "100vh", display: "flex", alignItems: "center",
+      justifyContent: "center", fontFamily: "sans-serif"
+    }}>
+      불러오는 중…
+    </div>;
+  }
   const overall = Math.round(
     SPECS.reduce((a, s) => a + pct(s.cur, s.target), 0) / SPECS.length
   );
