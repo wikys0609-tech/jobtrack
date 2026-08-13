@@ -60,6 +60,24 @@ function App() {
     }
     loadSpecs();
   }, []);
+
+  // 달성도 변경 → 화면 즉시 갱신 + DB 저장
+  async function updateCur(spec, delta) {
+    const newCur = Math.max(0, Math.min(spec.target, spec.cur + delta));
+
+    // 1) 화면 먼저 갱신 (빠른 반응)
+    setSPECS((prev) =>
+      prev.map((s) => (s.id === spec.id ? { ...s, cur: newCur } : s))
+    );
+
+    // 2) DB에 저장
+    const { error } = await supabase
+      .from("specs")
+      .update({ cur: newCur })
+      .eq("id", spec.id);
+    if (error) console.error("저장 실패:", error);
+  }
+
   if (SPECS.length === 0) {
     return <div style={{
       background: "#0B0E1A", color: "#7A82A8",
@@ -154,7 +172,7 @@ function App() {
               display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
               gap: 12
             }}>
-              {SPECS.map((s) => <GaugeCard key={s.name} s={s} />)}
+              {SPECS.map((s) => <GaugeCard key={s.id} s={s} onUpdate={updateCur} />)}
             </div>
           </section>
 
@@ -243,7 +261,7 @@ function App() {
 }
 
 // ── 계기판 카드 ──
-function GaugeCard({ s }) {
+function GaugeCard({ s, onUpdate }) {
   const p = pct(s.cur, s.target);
   const col = p >= 100 ? "#8DFF5C" : p >= 50 ? "#00E5C7" : "#FFC24B";
   const cx = 60, cy = 60, R = 46, start = 135, sweep = 270, ticks = 28;
@@ -275,7 +293,17 @@ function GaugeCard({ s }) {
         fontSize: 10.5, color: "#7A82A8", fontFamily: "monospace",
         marginTop: 2
       }}>{s.cur}/{s.target}{s.unit}</div>
+      <div style={{
+        display: "flex", justifyContent: "center", gap: 8,
+        marginTop: 8
+      }}>
+        <button onClick={() => onUpdate(s, -Math.max(1, Math.round(s.target * 0.1)))}
+          style={btnStyle}>−</button>
+        <button onClick={() => onUpdate(s, Math.max(1, Math.round(s.target * 0.1)))}
+          style={btnStyle}>+</button>
+      </div>
     </div>
+
   );
 }
 
@@ -288,5 +316,11 @@ function BriefRow({ k, v, c }) {
     </div>
   );
 }
+
+const btnStyle = {
+  width: 30, height: 30, borderRadius: 8,
+  border: "1px solid #262C4A", background: "#0B0E1A",
+  color: "#EAECF5", fontSize: 16, cursor: "pointer", lineHeight: 1,
+};
 
 export default App;
