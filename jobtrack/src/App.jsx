@@ -32,12 +32,7 @@ const GRASS = makeGrass();
 const GRASS_COLORS = ["#1A2036", "#8DFF5C44", "#8DFF5C77", "#8DFF5CBB", "#8DFF5C"];
 
 // 다음 할 일 (주기 포함)
-const NEXT_TODOS = [
-  { text: "알고리즘 2문제 풀기", cycle: "매일" },
-  { text: "CS 네트워크 1강 수강", cycle: "매일" },
-  { text: "사이드 프로젝트 배포", cycle: "매주" },
-  { text: "기술 블로그 1편 작성", cycle: "매주" },
-];
+
 const CYCLE_COLOR = { "매일": "#00E5C7", "매주": "#8B6DFF" };
 
 const pct = (c, t) => Math.min(100, Math.round((c / t) * 100));
@@ -59,6 +54,20 @@ function App() {
       }
     }
     loadSpecs();
+  }, []);
+
+  const [todos, setTodos] = useState([]);  // 투두를 담을 상자
+
+  useEffect(() => {
+    async function loadTodos() {
+      const { data, error } = await supabase
+        .from("todos")
+        .select("*")
+        .order("id");
+      if (error) console.error("투두 불러오기 실패:", error);
+      else setTodos(data);
+    }
+    loadTodos();
   }, []);
 
   // 달성도 변경 → 화면 즉시 갱신 + DB 저장
@@ -199,17 +208,20 @@ function App() {
               &gt; NEXT ACTIONS
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-              {NEXT_TODOS.map((t, i) => (
-                <div key={i} style={{
+              {todos.map((t) => (
+                <div key={t.id} style={{
                   display: "flex", alignItems: "center", gap: 8,
                   fontSize: 12
                 }}>
                   <span style={{
-                    color: CYCLE_COLOR[t.cycle], fontSize: 9,
-                    border: `1px solid ${CYCLE_COLOR[t.cycle]}55`, borderRadius: 3,
-                    padding: "1px 5px"
+                    color: CYCLE_COLOR[t.cycle] || "#7A82A8", fontSize: 9,
+                    border: `1px solid ${(CYCLE_COLOR[t.cycle] || "#7A82A8")}55`,
+                    borderRadius: 3, padding: "1px 5px"
                   }}>{t.cycle}</span>
-                  <span style={{ color: "#B9C2E8" }}>{t.text}</span>
+                  <span style={{
+                    color: t.done ? "#6E76A0" : "#B9C2E8",
+                    textDecoration: t.done ? "line-through" : "none"
+                  }}>{t.text}</span>
                 </div>
               ))}
             </div>
