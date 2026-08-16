@@ -56,6 +56,23 @@ function App() {
     loadSpecs();
   }, []);
 
+  // 투두 완료 토글 → 화면 즉시 갱신 + DB 저장
+  async function toggleTodo(todo) {
+    const newDone = !todo.done;
+
+    // 1) 화면 먼저
+    setTodos((prev) =>
+      prev.map((t) => (t.id === todo.id ? { ...t, done: newDone } : t))
+    );
+
+    // 2) DB 저장
+    const { error } = await supabase
+      .from("todos")
+      .update({ done: newDone })
+      .eq("id", todo.id);
+    if (error) console.error("투두 저장 실패:", error);
+  }
+
   const [todos, setTodos] = useState([]);  // 투두를 담을 상자
 
   useEffect(() => {
@@ -209,10 +226,19 @@ function App() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               {todos.map((t) => (
-                <div key={t.id} style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  fontSize: 12
-                }}>
+                <div key={t.id} onClick={() => toggleTodo(t)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    fontSize: 12, cursor: "pointer"
+                  }}>
+                  <span style={{
+                    width: 14, height: 14, borderRadius: 4, flexShrink: 0,
+                    border: `1.5px solid ${t.done ? "#8DFF5C" : "#6E76A0"}`,
+                    background: t.done ? "#8DFF5C" : "transparent",
+                    color: "#05070E", fontSize: 10, textAlign: "center", lineHeight: "12px"
+                  }}>
+                    {t.done ? "✓" : ""}
+                  </span>
                   <span style={{
                     color: CYCLE_COLOR[t.cycle] || "#7A82A8", fontSize: 9,
                     border: `1px solid ${(CYCLE_COLOR[t.cycle] || "#7A82A8")}55`,
@@ -222,6 +248,7 @@ function App() {
                     color: t.done ? "#6E76A0" : "#B9C2E8",
                     textDecoration: t.done ? "line-through" : "none"
                   }}>{t.text}</span>
+
                 </div>
               ))}
             </div>
