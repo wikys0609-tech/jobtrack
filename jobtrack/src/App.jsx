@@ -39,6 +39,8 @@ const pct = (c, t) => Math.min(100, Math.round((c / t) * 100));
 
 function App() {
   const [SPECS, setSPECS] = useState([]);  // 스펙을 담을 상자 (처음엔 비어있음)
+  const [newTodo, setNewTodo] = useState("");      // 입력창 글자
+  const [newCycle, setNewCycle] = useState("매일");  // 선택한 주기
 
   // 앱이 켜질 때 한 번 DB에서 스펙을 불러온다
   useEffect(() => {
@@ -71,6 +73,22 @@ function App() {
       .update({ done: newDone })
       .eq("id", todo.id);
     if (error) console.error("투두 저장 실패:", error);
+  }
+
+  // 새 투두 추가 → DB 저장 후 목록에 반영
+  async function addTodo() {
+    if (!newTodo.trim()) return;  // 빈 입력 방지
+
+    const { data, error } = await supabase
+      .from("todos")
+      .insert({ text: newTodo.trim(), cycle: newCycle, done: false })
+      .select()   // 방금 추가한 행(자동 생성된 id 포함)을 돌려받기
+      .single();
+
+    if (error) { console.error("추가 실패:", error); return; }
+
+    setTodos((prev) => [...prev, data]);  // 화면 목록에 추가
+    setNewTodo("");                        // 입력창 비우기
   }
 
   const [todos, setTodos] = useState([]);  // 투두를 담을 상자
@@ -251,6 +269,42 @@ function App() {
 
                 </div>
               ))}
+            </div>
+            {/* 새 투두 추가 */}
+            <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+              <input
+                value={newTodo}
+                onChange={(e) => setNewTodo(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") addTodo(); }}
+                placeholder="할 일 입력…"
+                style={{
+                  padding: "8px 10px", borderRadius: 8, fontSize: 12,
+                  background: "#0B0E1A", border: `1px solid ${LINE}`, color: TXT,
+                  outline: "none", fontFamily: "monospace"
+                }}
+              />
+              <div style={{ display: "flex", gap: 6 }}>
+                {["매일", "매주"].map((cy) => (
+                  <button key={cy} onClick={() => setNewCycle(cy)}
+                    style={{
+                      fontSize: 10, padding: "4px 8px", borderRadius: 6,
+                      cursor: "pointer", fontFamily: "monospace",
+                      border: `1px solid ${CYCLE_COLOR[cy]}`,
+                      background: newCycle === cy ? CYCLE_COLOR[cy] : "transparent",
+                      color: newCycle === cy ? "#05070E" : CYCLE_COLOR[cy]
+                    }}>
+                    {cy}
+                  </button>
+                ))}
+                <button onClick={addTodo}
+                  style={{
+                    marginLeft: "auto", fontSize: 11, padding: "4px 14px",
+                    borderRadius: 6, cursor: "pointer", border: "none",
+                    background: NEON, color: "#05070E", fontWeight: 700
+                  }}>
+                  추가
+                </button>
+              </div>
             </div>
           </section>
 
