@@ -91,6 +91,16 @@ function App() {
     setNewTodo("");                        // 입력창 비우기
   }
 
+  // 투두 삭제 → DB에서 제거 후 목록에서 제거
+  async function deleteTodo(id) {
+    // 1) 화면에서 먼저 제거
+    setTodos((prev) => prev.filter((t) => t.id !== id));
+
+    // 2) DB에서 삭제
+    const { error } = await supabase.from("todos").delete().eq("id", id);
+    if (error) console.error("삭제 실패:", error);
+  }
+
   const [todos, setTodos] = useState([]);  // 투두를 담을 상자
 
   useEffect(() => {
@@ -266,8 +276,16 @@ function App() {
                     color: t.done ? "#6E76A0" : "#B9C2E8",
                     textDecoration: t.done ? "line-through" : "none"
                   }}>{t.text}</span>
-
+                  <button
+                    onClick={(e) => { e.stopPropagation(); deleteTodo(t.id); }}
+                    style={{
+                      marginLeft: "auto", border: "none", background: "none",
+                      color: "#6E76A0", cursor: "pointer", fontSize: 14, padding: "0 2px"
+                    }}>
+                    ×
+                  </button>
                 </div>
+
               ))}
             </div>
             {/* 새 투두 추가 */}
