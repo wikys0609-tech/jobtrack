@@ -41,6 +41,7 @@ function App() {
   const [SPECS, setSPECS] = useState([]);  // 스펙을 담을 상자 (처음엔 비어있음)
   const [newTodo, setNewTodo] = useState("");      // 입력창 글자
   const [newCycle, setNewCycle] = useState("매일");  // 선택한 주기
+  const [openSpec, setOpenSpec] = useState(null);  // 열린 스펙 (null이면 닫힘)
 
   // 앱이 켜질 때 한 번 DB에서 스펙을 불러온다
   useEffect(() => {
@@ -226,7 +227,7 @@ function App() {
               display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
               gap: 12
             }}>
-              {SPECS.map((s) => <GaugeCard key={s.id} s={s} onUpdate={updateCur} />)}
+              {SPECS.map((s) => <GaugeCard key={s.id} s={s} onUpdate={updateCur} onOpen={setOpenSpec} />)}
             </div>
           </section>
 
@@ -367,12 +368,61 @@ function App() {
 
         </div>
       </main>
+      {/* 스펙 상세 패널 */}
+      {openSpec && (
+        <div onClick={() => setOpenSpec(null)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(5,7,14,.6)",
+            display: "flex", justifyContent: "flex-end", zIndex: 50
+          }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 360, maxWidth: "90%", height: "100%", background: "#121629",
+              borderLeft: `1px solid ${LINE}`, padding: 22, overflowY: "auto"
+            }}>
+            <div style={{
+              display: "flex", justifyContent: "space-between",
+              alignItems: "center", marginBottom: 16
+            }}>
+              <span style={{ fontSize: 18, fontWeight: 800 }}>{openSpec.name}</span>
+              <button onClick={() => setOpenSpec(null)}
+                style={{
+                  border: "none", background: "none", color: MUTE,
+                  fontSize: 20, cursor: "pointer"
+                }}>×</button>
+            </div>
+            <div style={{ fontSize: 12, color: MUTE, marginBottom: 4 }}>달성률</div>
+            <div style={{
+              fontSize: 32, fontWeight: 900, color: NEON,
+              fontFamily: "monospace", marginBottom: 20
+            }}>
+              {pct(openSpec.cur, openSpec.target)}%
+            </div>
+            <div style={{ fontSize: 12, color: MUTE, marginBottom: 8 }}>이 스펙의 할 일</div>
+            {todos.filter((t) => t.spec_id === openSpec.id).length === 0 ? (
+              <div style={{ fontSize: 12, color: MUTE }}>연결된 할 일이 없습니다.</div>
+            ) : (
+              todos.filter((t) => t.spec_id === openSpec.id).map((t) => (
+                <div key={t.id} style={{
+                  fontSize: 13, padding: "8px 0",
+                  borderBottom: `1px solid ${LINE}`,
+                  color: t.done ? "#6E76A0" : TXT,
+                  textDecoration: t.done ? "line-through" : "none"
+                }}>
+                  {t.text} <span style={{ color: MUTE, fontSize: 10 }}>· {t.cycle}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
 
 // ── 계기판 카드 ──
-function GaugeCard({ s, onUpdate }) {
+function GaugeCard({ s, onUpdate, onOpen }) {
   const p = pct(s.cur, s.target);
   const col = p >= 100 ? "#8DFF5C" : p >= 50 ? "#00E5C7" : "#FFC24B";
   const cx = 60, cy = 60, R = 46, start = 135, sweep = 270, ticks = 28;
@@ -388,9 +438,10 @@ function GaugeCard({ s, onUpdate }) {
     );
   }
   return (
-    <div style={{
+    <div onClick={() => onOpen(s)} style={{
       background: "#121629", border: "1px solid #262C4A",
-      borderRadius: 12, padding: "12px 6px 10px", textAlign: "center"
+      borderRadius: 12, padding: "12px 6px 10px", textAlign: "center",
+      cursor: "pointer"
     }}>
       <svg width="120" height="92" viewBox="0 0 120 92">
         {seg}
@@ -408,13 +459,12 @@ function GaugeCard({ s, onUpdate }) {
         display: "flex", justifyContent: "center", gap: 8,
         marginTop: 8
       }}>
-        <button onClick={() => onUpdate(s, -Math.max(1, Math.round(s.target * 0.1)))}
+        <button onClick={(e) => { e.stopPropagation(); onUpdate(s, -Math.max(1, Math.round(s.target * 0.1))); }}
           style={btnStyle}>−</button>
-        <button onClick={() => onUpdate(s, Math.max(1, Math.round(s.target * 0.1)))}
+        <button onClick={(e) => { e.stopPropagation(); onUpdate(s, Math.max(1, Math.round(s.target * 0.1))); }}
           style={btnStyle}>+</button>
       </div>
     </div>
-
   );
 }
 
