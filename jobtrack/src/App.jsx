@@ -35,6 +35,21 @@ const GRASS_COLORS = ["#1A2036", "#8DFF5C44", "#8DFF5C77", "#8DFF5CBB", "#8DFF5C
 
 const CYCLE_COLOR = { "매일": "#00E5C7", "매주": "#8B6DFF" };
 
+// 교육 콘텐츠 (MVP: 코드에 목록으로. 나중에 DB로 이전 가능)
+const CONTENT = [
+  { tag: ["알고리즘", "코딩테스트"], title: "코딩테스트 완전정복 45강", type: "강의", hrs: 30 },
+  { tag: ["CS", "네트워크", "OS"], title: "면접을 위한 CS 전공지식", type: "강의", hrs: 22 },
+  { tag: ["프로젝트", "Spring", "백엔드"], title: "실무형 백엔드 프로젝트", type: "부트캠프", hrs: 80 },
+  { tag: ["GitHub", "커밋", "협업"], title: "Git & GitHub 실전 가이드", type: "강의", hrs: 10 },
+  { tag: ["정보처리기사", "자격증"], title: "정보처리기사 단기 합격", type: "패키지", hrs: 40 },
+  { tag: ["블로그", "글", "기록"], title: "개발자 기술 글쓰기", type: "아티클", hrs: 3 },
+];
+
+// 스펙 이름에 콘텐츠 태그가 하나라도 포함되면 매칭
+function matchContent(specName) {
+  return CONTENT.filter((c) => c.tag.some((t) => specName.includes(t)));
+}
+
 const pct = (c, t) => Math.min(100, Math.round((c / t) * 100));
 
 function App() {
@@ -412,6 +427,73 @@ function App() {
                   {t.text} <span style={{ color: MUTE, fontSize: 10 }}>· {t.cycle}</span>
                 </div>
               ))
+            )}
+
+            {/* 스펙 상세 패널 */}
+            {openSpec && (
+              <div onClick={() => setOpenSpec(null)}
+                style={{
+                  position: "fixed", inset: 0, background: "rgba(5,7,14,.6)",
+                  display: "flex", justifyContent: "flex-end", zIndex: 50
+                }}>
+                <div onClick={(e) => e.stopPropagation()}
+                  style={{
+                    width: 360, maxWidth: "90%", height: "100%", background: "#121629",
+                    borderLeft: `1px solid ${LINE}`, padding: 22, overflowY: "auto"
+                  }}>
+                  <div style={{
+                    display: "flex", justifyContent: "space-between",
+                    alignItems: "center", marginBottom: 16
+                  }}>
+                    <span style={{ fontSize: 18, fontWeight: 800 }}>{openSpec.name}</span>
+                    <button onClick={() => setOpenSpec(null)}
+                      style={{
+                        border: "none", background: "none", color: MUTE,
+                        fontSize: 20, cursor: "pointer"
+                      }}>×</button>
+                  </div>
+                  <div style={{ fontSize: 12, color: MUTE, marginBottom: 4 }}>달성률</div>
+                  <div style={{
+                    fontSize: 32, fontWeight: 900, color: NEON,
+                    fontFamily: "monospace", marginBottom: 20
+                  }}>
+                    {pct(openSpec.cur, openSpec.target)}%
+                  </div>
+                  <div style={{ fontSize: 12, color: MUTE, marginBottom: 8 }}>이 스펙의 할 일</div>
+                  {todos.filter((t) => t.spec_id === openSpec.id).length === 0 ? (
+                    <div style={{ fontSize: 12, color: MUTE }}>연결된 할 일이 없습니다.</div>
+                  ) : (
+                    todos.filter((t) => t.spec_id === openSpec.id).map((t) => (
+                      <div key={t.id} style={{
+                        fontSize: 13, padding: "8px 0",
+                        borderBottom: `1px solid ${LINE}`,
+                        color: t.done ? "#6E76A0" : TXT,
+                        textDecoration: t.done ? "line-through" : "none"
+                      }}>
+                        {t.text} <span style={{ color: MUTE, fontSize: 10 }}>· {t.cycle}</span>
+                      </div>
+                    ))
+                  )}
+
+                  {/* 추천 교육 콘텐츠 */}
+                  <div style={{ fontSize: 12, color: MUTE, margin: "22px 0 8px" }}>추천 학습 콘텐츠</div>
+                  {matchContent(openSpec.name).length === 0 ? (
+                    <div style={{ fontSize: 12, color: MUTE }}>추천 콘텐츠를 준비 중입니다.</div>
+                  ) : (
+                    matchContent(openSpec.name).map((c) => (
+                      <div key={c.title} style={{
+                        background: "#0B0E1A", border: `1px solid ${LINE}`,
+                        borderRadius: 10, padding: 12, marginBottom: 8
+                      }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{c.title}</div>
+                        <div style={{ fontSize: 11, color: MUTE, fontFamily: "monospace" }}>
+                          {c.type} · {c.hrs}시간
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </div>
