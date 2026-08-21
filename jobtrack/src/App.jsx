@@ -92,19 +92,19 @@ function App() {
   }
 
   // 새 투두 추가 → DB 저장 후 목록에 반영
-  async function addTodo() {
-    if (!newTodo.trim()) return;  // 빈 입력 방지
+  // 새 투두 추가 → DB 저장 후 목록에 반영
+  async function addTodo(text, cycle, specId = null) {
+    if (!text.trim()) return;  // 빈 입력 방지
 
     const { data, error } = await supabase
       .from("todos")
-      .insert({ text: newTodo.trim(), cycle: newCycle, done: false })
-      .select()   // 방금 추가한 행(자동 생성된 id 포함)을 돌려받기
+      .insert({ text: text.trim(), cycle: cycle, done: false, spec_id: specId })
+      .select()
       .single();
 
     if (error) { console.error("추가 실패:", error); return; }
 
     setTodos((prev) => [...prev, data]);  // 화면 목록에 추가
-    setNewTodo("");                        // 입력창 비우기
   }
 
   // 투두 삭제 → DB에서 제거 후 목록에서 제거
@@ -309,7 +309,7 @@ function App() {
               <input
                 value={newTodo}
                 onChange={(e) => setNewTodo(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") addTodo(); }}
+                onKeyDown={(e) => { if (e.key === "Enter") { addTodo(newTodo, newCycle); setNewTodo(""); } }}
                 placeholder="할 일 입력…"
                 style={{
                   padding: "8px 10px", borderRadius: 8, fontSize: 12,
@@ -330,7 +330,7 @@ function App() {
                     {cy}
                   </button>
                 ))}
-                <button onClick={addTodo}
+                <button onClick={() => { addTodo(newTodo, newCycle); setNewTodo(""); }}
                   style={{
                     marginLeft: "auto", fontSize: 11, padding: "4px 14px",
                     borderRadius: 6, cursor: "pointer", border: "none",
@@ -474,6 +474,25 @@ function App() {
                       </div>
                     ))
                   )}
+
+                  {/* 이 스펙에 투두 추가 */}
+                  <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+                    <input
+                      id="panelTodoInput"
+                      placeholder="이 스펙에 할 일 추가…"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          addTodo(e.target.value, "매일", openSpec.id);
+                          e.target.value = "";
+                        }
+                      }}
+                      style={{
+                        flex: 1, padding: "8px 10px", borderRadius: 8, fontSize: 12,
+                        background: "#0B0E1A", border: `1px solid ${LINE}`, color: TXT,
+                        outline: "none", fontFamily: "monospace"
+                      }}
+                    />
+                  </div>
 
                   {/* 추천 교육 콘텐츠 */}
                   <div style={{ fontSize: 12, color: MUTE, margin: "22px 0 8px" }}>추천 학습 콘텐츠</div>
