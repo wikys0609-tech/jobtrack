@@ -118,6 +118,7 @@ function App() {
   }
 
   const [todos, setTodos] = useState([]);  // 투두를 담을 상자
+  const [todosLoading, setTodosLoading] = useState(true);
 
   useEffect(() => {
     async function loadTodos() {
@@ -127,6 +128,7 @@ function App() {
         .order("id");
       if (error) console.error("투두 불러오기 실패:", error);
       else setTodos(data);
+      setTodosLoading(false);   // ← 이 줄 추가
     }
     loadTodos();
   }, []);
@@ -269,6 +271,13 @@ function App() {
               &gt; NEXT ACTIONS
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+              {todosLoading ? (
+                <div style={{ fontSize: 12, color: "#6E76A0" }}>불러오는 중…</div>
+              ) : todos.length === 0 ? (
+                <div style={{ fontSize: 12, color: "#6E76A0" }}>
+                  아직 할 일이 없어요. 아래에서 추가해보세요.
+                </div>
+              ) : null}
               {todos.map((t) => (
                 <div key={t.id} onClick={() => toggleTodo(t)}
                   style={{
