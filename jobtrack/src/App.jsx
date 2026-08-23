@@ -10,9 +10,6 @@ const MUTE = "#7A82A8";
 const NEON = "#00E5C7";
 const VIOLET = "#8B6DFF";
 
-// ── 데이터 (나중에 Supabase로 교체할 자리) ──
-
-
 // 잔디 목업 데이터 생성
 function makeGrass() {
   const weeks = 26, g = [];
@@ -30,9 +27,6 @@ function makeGrass() {
 }
 const GRASS = makeGrass();
 const GRASS_COLORS = ["#1A2036", "#8DFF5C44", "#8DFF5C77", "#8DFF5CBB", "#8DFF5C"];
-
-// 다음 할 일 (주기 포함)
-
 const CYCLE_COLOR = { "매일": "#00E5C7", "매주": "#8B6DFF" };
 
 // 교육 콘텐츠 (MVP: 코드에 목록으로. 나중에 DB로 이전 가능)
