@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
+import Login from "./Login";
 
 // ── 색상 팔레트 ──
 const BG = "#0B0E1A";
@@ -51,6 +52,7 @@ function App() {
   const [newTodo, setNewTodo] = useState("");      // 입력창 글자
   const [newCycle, setNewCycle] = useState("매일");  // 선택한 주기
   const [openSpec, setOpenSpec] = useState(null);  // 열린 스펙 (null이면 닫힘)
+  const [session, setSession] = useState(null);
 
   // 앱이 켜질 때 한 번 DB에서 스펙을 불러온다
   useEffect(() => {
@@ -127,6 +129,12 @@ function App() {
     loadTodos();
   }, []);
 
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
   // 달성도 변경 → 화면 즉시 갱신 + DB 저장
   async function updateCur(spec, delta) {
     const newCur = Math.max(0, Math.min(spec.target, spec.cur + delta));
@@ -143,7 +151,7 @@ function App() {
       .eq("id", spec.id);
     if (error) console.error("저장 실패:", error);
   }
-
+  if (!session) return <Login />;
   if (SPECS.length === 0) {
     return <div style={{
       background: "#0B0E1A", color: "#7A82A8",
@@ -183,6 +191,14 @@ function App() {
         <span style={{ color: MUTE, fontSize: 12 }}>
           <b style={{ color: NEON }}>{done}</b>/{SPECS.length} 완료
         </span>
+
+        <button onClick={() => supabase.auth.signOut()}
+          style={{
+            marginLeft: 12, fontSize: 11, padding: "4px 10px",
+            borderRadius: 6, border: `1px solid ${LINE}`, background: "transparent",
+            color: MUTE, cursor: "pointer"
+          }}>로그아웃</button>
+
       </header>
 
       <main style={{ maxWidth: 1240, margin: "0 auto", padding: "24px 26px 60px" }}>
