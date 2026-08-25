@@ -94,7 +94,7 @@ function App() {
 
     const { data, error } = await supabase
       .from("todos")
-      .insert({ text: text.trim(), cycle: cycle, done: false, spec_id: specId })
+      .insert({ text: text.trim(), cycle: cycle, done: false, spec_id: specId, user_id: session.user.id })
       .select()
       .single();
 
@@ -121,13 +121,14 @@ function App() {
       const { data, error } = await supabase
         .from("todos")
         .select("*")
+        .eq("user_id", session.user.id)   // ← 이 줄 추가: 내 것만
         .order("id");
       if (error) console.error("투두 불러오기 실패:", error);
       else setTodos(data);
       setTodosLoading(false);   // ← 이 줄 추가
     }
     loadTodos();
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
