@@ -55,20 +55,41 @@ function App() {
   const [session, setSession] = useState(null);
 
   // 앱이 켜질 때 한 번 DB에서 스펙을 불러온다
-  useEffect(() => {
-    async function loadSpecs() {
-      const { data, error } = await supabase
+  // 내 스펙 불러오기 (없으면 기본 스펙 자동 생성)
+  async function loadSpecs() {
+    const { data, error } = await supabase
+      .from("specs")
+      .select("*")
+      .eq("user_id", session.user.id)
+      .order("id");
+
+    if (error) { console.error("스펙 불러오기 실패:", error); return; }
+
+    if (data.length === 0) {
+      const defaults = [
+        { name: "알고리즘", target: 100, unit: "문제", cur: 0 },
+        { name: "CS 지식", target: 100, unit: "%", cur: 0 },
+        { name: "프로젝트", target: 3, unit: "개", cur: 0 },
+        { name: "GitHub 커밋", target: 300, unit: "회", cur: 0 },
+        { name: "정보처리기사", target: 1, unit: "취득", cur: 0 },
+        { name: "블로그 글", target: 20, unit: "편", cur: 0 },
+      ].map((s) => ({ ...s, user_id: session.user.id }));
+
+      const { data: created, error: cErr } = await supabase
         .from("specs")
-        .select("*")
-        .order("id");
-      if (error) {
-        console.error("스펙 불러오기 실패:", error);
-      } else {
-        setSPECS(data);
-      }
+        .insert(defaults)
+        .select();
+      if (cErr) { console.error("기본 스펙 생성 실패:", cErr); return; }
+      setSPECS(created);
+    } else {
+      setSPECS(data);
     }
+  }
+
+  useEffect(() => {
+    if (!session) return;
     loadSpecs();
-  }, []);
+  }, [session]);
 
   // 투두 완료 토글 → 화면 즉시 갱신 + DB 저장
   async function toggleTodo(todo) {
@@ -449,95 +470,44 @@ function App() {
               ))
             )}
 
-            {/* 스펙 상세 패널 */}
-            {openSpec && (
-              <div onClick={() => setOpenSpec(null)}
+            {/* 이 스펙에 투두 추가 */}
+            <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+              <input
+                placeholder="이 스펙에 할 일 추가…"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    addTodo(e.target.value, "매일", openSpec.id);
+                    e.target.value = "";
+                  }
+                }}
                 style={{
-                  position: "fixed", inset: 0, background: "rgba(5,7,14,.6)",
-                  display: "flex", justifyContent: "flex-end", zIndex: 50
+                  flex: 1, padding: "8px 10px", borderRadius: 8, fontSize: 12,
+                  background: "#0B0E1A", border: `1px solid ${LINE}`, color: TXT,
+                  outline: "none", fontFamily: "monospace"
+                }}
+              />
+            </div>
+
+            {/* 추천 교육 콘텐츠 */}
+            <div style={{ fontSize: 12, color: MUTE, margin: "22px 0 8px" }}>추천 학습 콘텐츠</div>
+            {matchContent(openSpec.name).length === 0 ? (
+              <div style={{ fontSize: 12, color: MUTE }}>추천 콘텐츠를 준비 중입니다.</div>
+            ) : (
+              matchContent(openSpec.name).map((c) => (
+                <div key={c.title} style={{
+                  background: "#0B0E1A", border: `1px solid ${LINE}`,
+                  borderRadius: 10, padding: 12, marginBottom: 8
                 }}>
-                <div onClick={(e) => e.stopPropagation()}
-                  style={{
-                    width: 360, maxWidth: "90%", height: "100%", background: "#121629",
-                    borderLeft: `1px solid ${LINE}`, padding: 22, overflowY: "auto"
-                  }}>
-                  <div style={{
-                    display: "flex", justifyContent: "space-between",
-                    alignItems: "center", marginBottom: 16
-                  }}>
-                    <span style={{ fontSize: 18, fontWeight: 800 }}>{openSpec.name}</span>
-                    <button onClick={() => setOpenSpec(null)}
-                      style={{
-                        border: "none", background: "none", color: MUTE,
-                        fontSize: 20, cursor: "pointer"
-                      }}>×</button>
+                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{c.title}</div>
+                  <div style={{ fontSize: 11, color: MUTE, fontFamily: "monospace" }}>
+                    {c.type} · {c.hrs}시간
                   </div>
-                  <div style={{ fontSize: 12, color: MUTE, marginBottom: 4 }}>달성률</div>
-                  <div style={{
-                    fontSize: 32, fontWeight: 900, color: NEON,
-                    fontFamily: "monospace", marginBottom: 20
-                  }}>
-                    {pct(openSpec.cur, openSpec.target)}%
-                  </div>
-                  <div style={{ fontSize: 12, color: MUTE, marginBottom: 8 }}>이 스펙의 할 일</div>
-                  {todos.filter((t) => t.spec_id === openSpec.id).length === 0 ? (
-                    <div style={{ fontSize: 12, color: MUTE }}>연결된 할 일이 없습니다.</div>
-                  ) : (
-                    todos.filter((t) => t.spec_id === openSpec.id).map((t) => (
-                      <div key={t.id} style={{
-                        fontSize: 13, padding: "8px 0",
-                        borderBottom: `1px solid ${LINE}`,
-                        color: t.done ? "#6E76A0" : TXT,
-                        textDecoration: t.done ? "line-through" : "none"
-                      }}>
-                        {t.text} <span style={{ color: MUTE, fontSize: 10 }}>· {t.cycle}</span>
-                      </div>
-                    ))
-                  )}
-
-                  {/* 이 스펙에 투두 추가 */}
-                  <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-                    <input
-                      id="panelTodoInput"
-                      placeholder="이 스펙에 할 일 추가…"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          addTodo(e.target.value, "매일", openSpec.id);
-                          e.target.value = "";
-                        }
-                      }}
-                      style={{
-                        flex: 1, padding: "8px 10px", borderRadius: 8, fontSize: 12,
-                        background: "#0B0E1A", border: `1px solid ${LINE}`, color: TXT,
-                        outline: "none", fontFamily: "monospace"
-                      }}
-                    />
-                  </div>
-
-                  {/* 추천 교육 콘텐츠 */}
-                  <div style={{ fontSize: 12, color: MUTE, margin: "22px 0 8px" }}>추천 학습 콘텐츠</div>
-                  {matchContent(openSpec.name).length === 0 ? (
-                    <div style={{ fontSize: 12, color: MUTE }}>추천 콘텐츠를 준비 중입니다.</div>
-                  ) : (
-                    matchContent(openSpec.name).map((c) => (
-                      <div key={c.title} style={{
-                        background: "#0B0E1A", border: `1px solid ${LINE}`,
-                        borderRadius: 10, padding: 12, marginBottom: 8
-                      }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{c.title}</div>
-                        <div style={{ fontSize: 11, color: MUTE, fontFamily: "monospace" }}>
-                          {c.type} · {c.hrs}시간
-                        </div>
-                      </div>
-                    ))
-                  )}
                 </div>
-              </div>
+              ))
             )}
           </div>
         </div>
       )}
-
     </div>
   );
 }
