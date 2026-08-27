@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import Login from "./Login";
+import Onboarding from "./Onboarding";
 
 // ── 색상 팔레트 ──
 const BG = "#0B0E1A";
@@ -49,6 +50,7 @@ const pct = (c, t) => Math.min(100, Math.round((c / t) * 100));
 
 function App() {
   const [SPECS, setSPECS] = useState([]);  // 스펙을 담을 상자 (처음엔 비어있음)
+  const [specsLoading, setSpecsLoading] = useState(true);
   const [newTodo, setNewTodo] = useState("");      // 입력창 글자
   const [newCycle, setNewCycle] = useState("매일");  // 선택한 주기
   const [openSpec, setOpenSpec] = useState(null);  // 열린 스펙 (null이면 닫힘)
@@ -62,28 +64,9 @@ function App() {
       .select("*")
       .eq("user_id", session.user.id)
       .order("id");
-
     if (error) { console.error("스펙 불러오기 실패:", error); return; }
-
-    if (data.length === 0) {
-      const defaults = [
-        { name: "알고리즘", target: 100, unit: "문제", cur: 0 },
-        { name: "CS 지식", target: 100, unit: "%", cur: 0 },
-        { name: "프로젝트", target: 3, unit: "개", cur: 0 },
-        { name: "GitHub 커밋", target: 300, unit: "회", cur: 0 },
-        { name: "정보처리기사", target: 1, unit: "취득", cur: 0 },
-        { name: "블로그 글", target: 20, unit: "편", cur: 0 },
-      ].map((s) => ({ ...s, user_id: session.user.id }));
-
-      const { data: created, error: cErr } = await supabase
-        .from("specs")
-        .insert(defaults)
-        .select();
-      if (cErr) { console.error("기본 스펙 생성 실패:", cErr); return; }
-      setSPECS(created);
-    } else {
-      setSPECS(data);
-    }
+    setSPECS(data);
+    setSpecsLoading(false);
   }
 
   useEffect(() => {
@@ -174,15 +157,19 @@ function App() {
     if (error) console.error("저장 실패:", error);
   }
   if (!session) return <Login />;
-  if (SPECS.length === 0) {
+  // 스펙 불러오는 중이면 대기
+  if (specsLoading) {
     return <div style={{
       background: "#0B0E1A", color: "#7A82A8",
       minHeight: "100vh", display: "flex", alignItems: "center",
       justifyContent: "center", fontFamily: "sans-serif"
-    }}>
-      불러오는 중…
-    </div>;
+    }}>불러오는 중…</div>;
   }
+  // 스펙이 하나도 없으면 = 신규 사용자 → 온보딩
+  if (SPECS.length === 0) {
+    return <Onboarding session={session} onDone={() => loadSpecs()} />;
+  }
+
   const overall = Math.round(
     SPECS.reduce((a, s) => a + pct(s.cur, s.target), 0) / SPECS.length
   );
