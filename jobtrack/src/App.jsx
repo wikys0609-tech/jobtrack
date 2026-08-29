@@ -121,6 +121,7 @@ function App() {
   const [todosLoading, setTodosLoading] = useState(true);
 
   useEffect(() => {
+    if (!session) return;
     async function loadTodos() {
       const { data, error } = await supabase
         .from("todos")
