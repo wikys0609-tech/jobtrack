@@ -49,12 +49,29 @@ function matchContent(specName) {
 const pct = (c, t) => Math.min(100, Math.round((c / t) * 100));
 
 function App() {
-  const [SPECS, setSPECS] = useState([]);  // 스펙을 담을 상자 (처음엔 비어있음)
+  const [SPECS, setSPECS] = useState([]);
   const [specsLoading, setSpecsLoading] = useState(true);
-  const [newTodo, setNewTodo] = useState("");      // 입력창 글자
-  const [newCycle, setNewCycle] = useState("매일");  // 선택한 주기
-  const [openSpec, setOpenSpec] = useState(null);  // 열린 스펙 (null이면 닫힘)
+  const [newTodo, setNewTodo] = useState("");
+  const [newCycle, setNewCycle] = useState("매일");
+  const [openSpec, setOpenSpec] = useState(null);
   const [session, setSession] = useState(null);
+  const [hasProfile, setHasProfile] = useState(null);  // null=확인중, true/false
+  const [newSpecName, setNewSpecName] = useState("");    // 스펙 추가 입력
+  const [newSpecTarget, setNewSpecTarget] = useState(""); // 스펙 목표 입력
+
+  // 로그인되면 profile(직무) 있는지 확인
+  useEffect(() => {
+    if (!session) return;
+    async function checkProfile() {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .limit(1);
+      setHasProfile(data && data.length > 0);
+    }
+    checkProfile();
+  }, [session]);
 
   // 앱이 켜질 때 한 번 DB에서 스펙을 불러온다
   // 내 스펙 불러오기 (없으면 기본 스펙 자동 생성)
@@ -157,18 +174,46 @@ function App() {
       .eq("id", spec.id);
     if (error) console.error("저장 실패:", error);
   }
+
+  // 스펙 추가 → DB 저장 후 목록에 반영
+  async function addSpec() {
+    if (!newSpecName.trim() || !newSpecTarget) return;
+    const { data, error } = await supabase
+      .from("specs")
+      .insert({
+        name: newSpecName.trim(),
+        target: Number(newSpecTarget),
+        unit: "",
+        cur: 0,
+        user_id: session.user.id,
+      })
+      .select()
+      .single();
+    if (error) { console.error("스펙 추가 실패:", error); return; }
+    setSPECS((prev) => [...prev, data]);
+    setNewSpecName(""); setNewSpecTarget("");
+  }
+
+  // 스펙 삭제 (+ 그 스펙의 투두도 정리)
+  async function deleteSpec(id) {
+    setSPECS((prev) => prev.filter((s) => s.id !== id));
+    await supabase.from("todos").delete().eq("spec_id", id);
+    const { error } = await supabase.from("specs").delete().eq("id", id);
+    if (error) console.error("스펙 삭제 실패:", error);
+  }
+
   if (!session) return <Login />;
-  // 스펙 불러오는 중이면 대기
-  if (specsLoading) {
+  // profile 확인 중이거나 스펙 로딩 중
+  if (hasProfile === null || specsLoading) {
     return <div style={{
       background: "#0B0E1A", color: "#7A82A8",
       minHeight: "100vh", display: "flex", alignItems: "center",
       justifyContent: "center", fontFamily: "sans-serif"
     }}>불러오는 중…</div>;
   }
-  // 스펙이 하나도 없으면 = 신규 사용자 → 온보딩
-  if (SPECS.length === 0) {
-    return <Onboarding session={session} onDone={() => loadSpecs()} />;
+  // 직무(profile)가 없으면 → 온보딩
+  if (!hasProfile) {
+    return <Onboarding session={session} onDone={() => setHasProfile(true)} />;
   }
 
   const overall = Math.round(
@@ -265,6 +310,29 @@ function App() {
               gap: 12
             }}>
               {SPECS.map((s) => <GaugeCard key={s.id} s={s} onUpdate={updateCur} onOpen={setOpenSpec} />)}
+            </div>
+
+            {/* 스펙 추가 */}
+            <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
+              <input value={newSpecName} onChange={(e) => setNewSpecName(e.target.value)}
+                placeholder="새 스펙 이름"
+                style={{
+                  flex: 2, padding: "8px 10px", borderRadius: 8, fontSize: 12,
+                  background: "#0B0E1A", border: `1px solid ${LINE}`, color: TXT, outline: "none"
+                }} />
+              <input value={newSpecTarget} onChange={(e) => setNewSpecTarget(e.target.value)}
+                type="number" placeholder="목표"
+                style={{
+                  flex: 1, padding: "8px 10px", borderRadius: 8, fontSize: 12,
+                  background: "#0B0E1A", border: `1px solid ${LINE}`, color: TXT, outline: "none"
+                }} />
+              <button onClick={addSpec}
+                style={{
+                  padding: "0 16px", borderRadius: 8, border: "none",
+                  background: NEON, color: "#05070E", fontWeight: 700, cursor: "pointer"
+                }}>
+                + 스펙
+              </button>
             </div>
           </section>
 
