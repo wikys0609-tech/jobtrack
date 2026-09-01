@@ -63,11 +63,12 @@ function App() {
   useEffect(() => {
     if (!session) return;
     async function checkProfile() {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("profiles")
-        .select("id")
+        .select("*")
         .eq("user_id", session.user.id)
         .limit(1);
+      if (error) { console.error("프로필 확인 실패:", error); return; }
       setHasProfile(data && data.length > 0);
     }
     checkProfile();
@@ -216,11 +217,13 @@ function App() {
     return <Onboarding session={session} onDone={() => setHasProfile(true)} />;
   }
 
-  const overall = Math.round(
+  const overall = SPECS.length === 0 ? 0 : Math.round(
     SPECS.reduce((a, s) => a + pct(s.cur, s.target), 0) / SPECS.length
   );
   const done = SPECS.filter((s) => pct(s.cur, s.target) >= 100).length;
-  const weakest = [...SPECS].sort((a, b) => pct(a.cur, a.target) - pct(b.cur, b.target))[0];
+  const weakest = SPECS.length === 0
+    ? { name: "-" }
+    : [...SPECS].sort((a, b) => pct(a.cur, a.target) - pct(b.cur, b.target))[0];
 
   return (
     <div style={{
@@ -241,7 +244,7 @@ function App() {
           }}>
             JobTrack
           </span>
-          <span style={{ color: MUTE, fontSize: 12 }}>백엔드 개발자 · 통합 대시보드</span>
+          <span style={{ color: MUTE, fontSize: 12 }}>직무 · 통합 대시보드</span>
         </div>
         <span style={{ color: MUTE, fontSize: 12 }}>
           <b style={{ color: NEON }}>{done}</b>/{SPECS.length} 완료
@@ -309,6 +312,15 @@ function App() {
               display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
               gap: 12
             }}>
+              {SPECS.length === 0 && (
+                <div style={{
+                  gridColumn: "1 / -1", textAlign: "center", padding: "30px 0",
+                  color: MUTE, fontSize: 13
+                }}>
+                  아직 스펙이 없어요. 아래에서 준비할 스펙을 추가해보세요 👇
+                </div>
+              )}
+
               {SPECS.map((s) => <GaugeCard key={s.id} s={s} onUpdate={updateCur} onOpen={setOpenSpec} />)}
             </div>
 
@@ -509,6 +521,21 @@ function App() {
               fontFamily: "monospace", marginBottom: 20
             }}>
               {pct(openSpec.cur, openSpec.target)}%
+
+              {/* 스펙 삭제 */}
+              <button onClick={() => {
+                if (confirm(`"${openSpec.name}" 스펙을 삭제할까요? 연결된 할 일도 함께 삭제됩니다.`)) {
+                  deleteSpec(openSpec.id);
+                  setOpenSpec(null);
+                }
+              }}
+                style={{
+                  fontSize: 11, padding: "5px 10px", borderRadius: 6,
+                  border: `1px solid #FF5CAA55`, background: "transparent",
+                  color: "#FF5CAA", cursor: "pointer", marginBottom: 20
+                }}>
+                스펙 삭제
+              </button>
             </div>
             <div style={{ fontSize: 12, color: MUTE, marginBottom: 8 }}>이 스펙의 할 일</div>
             {todos.filter((t) => t.spec_id === openSpec.id).length === 0 ? (
